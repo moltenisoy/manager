@@ -211,8 +211,16 @@ class SettingsPanel(QWidget):
     labelDistanceChanged = pyqtSignal(int)      # px
 
     # NUEVO: desplazamiento horizontal y modo de contenido
-    labelHorizontalOffsetChanged = pyqtSignal(int)   # px (- grande a + grande)
-    labelContentModeChanged = pyqtSignal(str)        # "full" | "app"
+    labelHorizontalOffsetChanged = pyqtSignal(int)
+    labelContentModeChanged = pyqtSignal(str)
+
+    viewModeChanged = pyqtSignal(str)
+    flip3dSpacingChanged = pyqtSignal(int)
+    flip3dCardScaleChanged = pyqtSignal(float)
+    flip3dAnimationSpeedChanged = pyqtSignal(float)
+    flip3dShowMemoryChanged = pyqtSignal(bool)
+    flip3dShowBordersChanged = pyqtSignal(bool)
+    flip3dShowTitlesChanged = pyqtSignal(bool)
 
     ignoreListChanged = pyqtSignal(list)
     closeApp = pyqtSignal()
@@ -244,12 +252,12 @@ class SettingsPanel(QWidget):
         self.right_column = QVBoxLayout()
         self.right_column.setSpacing(15)
 
-        # Controles
+        self._create_view_mode_group()
         self._create_basic_settings()
         self._create_animations_group()
         self._create_border_group()
 
-        # Derecha
+        self._create_flip3d_settings()
         self._create_floating_name_group()
         self._create_process_group()
         self._create_autostart_and_buttons_group()
@@ -293,6 +301,89 @@ class SettingsPanel(QWidget):
         grid.addWidget(self.size_slider, 2, 1)
 
         self.left_column.addWidget(g)
+
+    def _create_view_mode_group(self):
+        g = QGroupBox("Modo de Visualización", self)
+        v = QVBoxLayout(g)
+
+        h = QHBoxLayout()
+        mode_label = QLabel("Seleccionar Modo:", self)
+        self.view_mode_combo = QComboBox(self)
+        self.view_mode_combo.addItems(["Nativo (Sidebar)", "Flip3D"])
+        self.view_mode_combo.currentTextChanged.connect(self._on_view_mode_changed)
+        h.addWidget(mode_label)
+        h.addWidget(self.view_mode_combo)
+        v.addLayout(h)
+
+        self.left_column.addWidget(g)
+
+    def _on_view_mode_changed(self, text):
+        mode = "native" if "Nativo" in text else "flip3d"
+        self.viewModeChanged.emit(mode)
+
+    def _create_flip3d_settings(self):
+        g = QGroupBox("Configuración Flip3D", self)
+        grid = QGridLayout(g)
+        grid.setSpacing(15)
+
+        spacing_label = QLabel("Separación de Tarjetas", self)
+        self.flip3d_spacing_slider = QSlider(Qt.Orientation.Horizontal, self)
+        self.flip3d_spacing_slider.setRange(50, 400)
+        self.flip3d_spacing_slider.setValue(150)
+        self.flip3d_spacing_slider.valueChanged.connect(self.flip3dSpacingChanged.emit)
+        grid.addWidget(spacing_label, 0, 0)
+        grid.addWidget(self.flip3d_spacing_slider, 0, 1)
+
+        scale_label = QLabel("Escala de Tarjetas", self)
+        self.flip3d_scale_slider = QSlider(Qt.Orientation.Horizontal, self)
+        self.flip3d_scale_slider.setRange(50, 200)
+        self.flip3d_scale_slider.setValue(100)
+        self.flip3d_scale_value = QLabel("1.00", self)
+        self.flip3d_scale_slider.valueChanged.connect(self._on_flip3d_scale_changed)
+        grid.addWidget(scale_label, 1, 0)
+        scale_h = QHBoxLayout()
+        scale_h.addWidget(self.flip3d_scale_slider)
+        scale_h.addWidget(self.flip3d_scale_value)
+        grid.addLayout(scale_h, 1, 1)
+
+        speed_label = QLabel("Velocidad de Animación", self)
+        self.flip3d_speed_slider = QSlider(Qt.Orientation.Horizontal, self)
+        self.flip3d_speed_slider.setRange(1, 50)
+        self.flip3d_speed_slider.setValue(10)
+        self.flip3d_speed_value = QLabel("0.10", self)
+        self.flip3d_speed_slider.valueChanged.connect(self._on_flip3d_speed_changed)
+        grid.addWidget(speed_label, 2, 0)
+        speed_h = QHBoxLayout()
+        speed_h.addWidget(self.flip3d_speed_slider)
+        speed_h.addWidget(self.flip3d_speed_value)
+        grid.addLayout(speed_h, 2, 1)
+
+        self.flip3d_show_memory = QCheckBox("Mostrar uso de memoria", self)
+        self.flip3d_show_memory.setChecked(True)
+        self.flip3d_show_memory.toggled.connect(self.flip3dShowMemoryChanged.emit)
+        grid.addWidget(self.flip3d_show_memory, 3, 0, 1, 2)
+
+        self.flip3d_show_borders = QCheckBox("Mostrar bordes de tarjetas", self)
+        self.flip3d_show_borders.setChecked(True)
+        self.flip3d_show_borders.toggled.connect(self.flip3dShowBordersChanged.emit)
+        grid.addWidget(self.flip3d_show_borders, 4, 0, 1, 2)
+
+        self.flip3d_show_titles = QCheckBox("Mostrar títulos de ventanas", self)
+        self.flip3d_show_titles.setChecked(True)
+        self.flip3d_show_titles.toggled.connect(self.flip3dShowTitlesChanged.emit)
+        grid.addWidget(self.flip3d_show_titles, 5, 0, 1, 2)
+
+        self.right_column.addWidget(g)
+
+    def _on_flip3d_scale_changed(self, value):
+        scale = value / 100.0
+        self.flip3d_scale_value.setText(f"{scale:.2f}")
+        self.flip3dCardScaleChanged.emit(scale)
+
+    def _on_flip3d_speed_changed(self, value):
+        speed = value / 100.0
+        self.flip3d_speed_value.setText(f"{speed:.2f}")
+        self.flip3dAnimationSpeedChanged.emit(speed)
 
     def _create_animations_group(self):
         g = QGroupBox("Animaciones Generales", self)

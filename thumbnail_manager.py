@@ -2,11 +2,15 @@ import os
 import subprocess
 import psutil
 import win32process
+import win32gui
+import win32ui
 from PyQt6.QtCore import QObject, pyqtSlot, QPoint, QRect
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QPixmap, QImage
 from thumbnail_widget import ThumbnailWidget
 from settings_panel import SettingsPanel
+from flip3d_widget import Flip3DWidget
+from PIL import Image
 
 class ThumbnailManager(QObject):
     def __init__(self, hook_manager):
@@ -24,19 +28,28 @@ class ThumbnailManager(QObject):
         self.border_color = "#0078D7"
         self.exclusive_hwnd = None
 
-        # Hover zoom animation
+        self.view_mode = "native"
+        self.flip3d_spacing = 150
+        self.flip3d_card_scale = 1.0
+        self.flip3d_animation_speed = 0.1
+        self.flip3d_show_memory = True
+        self.flip3d_show_borders = True
+        self.flip3d_show_titles = True
+
+        self.flip3d_widget = None
+        self.windows_data = []
+
         self.hover_animation_enabled = True
         self.hover_animation_intensity = 1.15
 
-        # Nombre flotante independiente (global)
         self.name_enabled = False
-        self.name_position = "right"  # right | top | bottom
+        self.name_position = "right"
         self.name_font = QFont("Arial", 10)
         self.name_color = "#FFFFFF"
-        self.name_text_size = 10      # pt
-        self.name_distance = 15       # px
-        self.name_horizontal_offset = 0  # NUEVO: desplazamiento horizontal para top/bottom
-        self.name_content_mode = "full"  # NUEVO: "full" | "app"
+        self.name_text_size = 10
+        self.name_distance = 15
+        self.name_horizontal_offset = 0
+        self.name_content_mode = "full"
 
         self.ignored_exe_names = set()
         
@@ -62,10 +75,25 @@ class ThumbnailManager(QObject):
         self.settings_panel.labelColorChanged.connect(self._set_label_color)
         self.settings_panel.labelTextSizeChanged.connect(self._set_label_text_size)
         self.settings_panel.labelDistanceChanged.connect(self._set_label_distance)
-        self.settings_panel.labelHorizontalOffsetChanged.connect(self._set_label_horizontal_offset)  # NUEVO
-        self.settings_panel.labelContentModeChanged.connect(self._set_label_content_mode)            # NUEVO
+        self.settings_panel.labelHorizontalOffsetChanged.connect(self._set_label_horizontal_offset)
+        self.settings_panel.labelContentModeChanged.connect(self._set_label_content_mode)
 
         self.settings_panel.ignoreListChanged.connect(self._set_ignore_list)
+
+        if hasattr(self.settings_panel, 'viewModeChanged'):
+            self.settings_panel.viewModeChanged.connect(self._set_view_mode)
+        if hasattr(self.settings_panel, 'flip3dSpacingChanged'):
+            self.settings_panel.flip3dSpacingChanged.connect(self._set_flip3d_spacing)
+        if hasattr(self.settings_panel, 'flip3dCardScaleChanged'):
+            self.settings_panel.flip3dCardScaleChanged.connect(self._set_flip3d_card_scale)
+        if hasattr(self.settings_panel, 'flip3dAnimationSpeedChanged'):
+            self.settings_panel.flip3dAnimationSpeedChanged.connect(self._set_flip3d_animation_speed)
+        if hasattr(self.settings_panel, 'flip3dShowMemoryChanged'):
+            self.settings_panel.flip3dShowMemoryChanged.connect(self._set_flip3d_show_memory)
+        if hasattr(self.settings_panel, 'flip3dShowBordersChanged'):
+            self.settings_panel.flip3dShowBordersChanged.connect(self._set_flip3d_show_borders)
+        if hasattr(self.settings_panel, 'flip3dShowTitlesChanged'):
+            self.settings_panel.flip3dShowTitlesChanged.connect(self._set_flip3d_show_titles)
 
     @pyqtSlot()
     def force_quit_app(self):
@@ -74,30 +102,37 @@ class ThumbnailManager(QObject):
     @pyqtSlot()
     def toggle_visibility(self):
         self.is_visible = not self.is_visible
-        if self.is_visible:
-            if self.exclusive_hwnd is None:
-                self._update_layout(is_appearing=True)
-            self._raise_thumbnails()
-            if self.exclusive_hwnd is not None:
-                sel = self.thumbnails.get(self.exclusive_hwnd)
-                if sel:
-                    if hasattr(sel, "ensure_visible_geometry"):
-                        sel.ensure_visible_geometry()
-                    sel.show()
-                    sel.raise_()
+
+        if self.view_mode == "flip3d":
+            if self.is_visible:
+                self._show_flip3d()
+            else:
+                self._hide_flip3d()
         else:
-            pinned_widget = self.thumbnails.get(self.exclusive_hwnd) if self.exclusive_hwnd is not None else None
-            for widget in self.thumbnails.values():
-                if widget.isVisible():
-                    if pinned_widget is not None and widget is pinned_widget:
-                        widget.hide()
-                        continue
-                    if self.animations_enabled and hasattr(widget, "animate_exit_left"):
-                        start_pos = widget.pos()
-                        end_pos = QPoint(-widget.width(), start_pos.y())
-                        widget.animate_exit_left(start_pos, end_pos, on_finish=widget.hide)
-                    else:
-                        widget.hide()
+            if self.is_visible:
+                if self.exclusive_hwnd is None:
+                    self._update_layout(is_appearing=True)
+                self._raise_thumbnails()
+                if self.exclusive_hwnd is not None:
+                    sel = self.thumbnails.get(self.exclusive_hwnd)
+                    if sel:
+                        if hasattr(sel, "ensure_visible_geometry"):
+                            sel.ensure_visible_geometry()
+                        sel.show()
+                        sel.raise_()
+            else:
+                pinned_widget = self.thumbnails.get(self.exclusive_hwnd) if self.exclusive_hwnd is not None else None
+                for widget in self.thumbnails.values():
+                    if widget.isVisible():
+                        if pinned_widget is not None and widget is pinned_widget:
+                            widget.hide()
+                            continue
+                        if self.animations_enabled and hasattr(widget, "animate_exit_left"):
+                            start_pos = widget.pos()
+                            end_pos = QPoint(-widget.width(), start_pos.y())
+                            widget.animate_exit_left(start_pos, end_pos, on_finish=widget.hide)
+                        else:
+                            widget.hide()
 
     def _raise_thumbnails(self):
         for w in self.thumbnails.values():
@@ -168,8 +203,11 @@ class ThumbnailManager(QObject):
                 self.thumbnails[hwnd].close()
                 del self.thumbnails[hwnd]
 
-        if self.is_visible and self.exclusive_hwnd is None:
-            self._update_layout()
+        if self.is_visible:
+            if self.view_mode == "flip3d":
+                self._update_flip3d_data()
+            elif self.exclusive_hwnd is None:
+                self._update_layout()
 
     @pyqtSlot(int)
     def _on_widget_removed(self, hwnd):
@@ -384,3 +422,194 @@ class ThumbnailManager(QObject):
                 del self.thumbnails[hwnd]
         if self.is_visible and self.exclusive_hwnd is None:
             self._update_layout()
+
+    @pyqtSlot(str)
+    def _set_view_mode(self, mode):
+        if self.view_mode == mode:
+            return
+
+        if self.is_visible:
+            if self.view_mode == "flip3d":
+                self._hide_flip3d()
+            else:
+                for widget in self.thumbnails.values():
+                    widget.hide()
+
+        self.view_mode = mode
+
+        if self.is_visible:
+            if self.view_mode == "flip3d":
+                self._show_flip3d()
+            else:
+                self._update_layout(is_appearing=True)
+
+    @pyqtSlot(int)
+    def _set_flip3d_spacing(self, value):
+        self.flip3d_spacing = value
+        if self.flip3d_widget:
+            self.flip3d_widget.set_settings(
+                self.flip3d_spacing,
+                self.flip3d_card_scale,
+                self.flip3d_animation_speed,
+                self.flip3d_show_memory,
+                self.flip3d_show_borders,
+                self.flip3d_show_titles
+            )
+
+    @pyqtSlot(float)
+    def _set_flip3d_card_scale(self, value):
+        self.flip3d_card_scale = value
+        if self.flip3d_widget:
+            self.flip3d_widget.set_settings(
+                self.flip3d_spacing,
+                self.flip3d_card_scale,
+                self.flip3d_animation_speed,
+                self.flip3d_show_memory,
+                self.flip3d_show_borders,
+                self.flip3d_show_titles
+            )
+
+    @pyqtSlot(float)
+    def _set_flip3d_animation_speed(self, value):
+        self.flip3d_animation_speed = value
+        if self.flip3d_widget:
+            self.flip3d_widget.set_settings(
+                self.flip3d_spacing,
+                self.flip3d_card_scale,
+                self.flip3d_animation_speed,
+                self.flip3d_show_memory,
+                self.flip3d_show_borders,
+                self.flip3d_show_titles
+            )
+
+    @pyqtSlot(bool)
+    def _set_flip3d_show_memory(self, value):
+        self.flip3d_show_memory = value
+        if self.flip3d_widget:
+            self.flip3d_widget.set_settings(
+                self.flip3d_spacing,
+                self.flip3d_card_scale,
+                self.flip3d_animation_speed,
+                self.flip3d_show_memory,
+                self.flip3d_show_borders,
+                self.flip3d_show_titles
+            )
+
+    @pyqtSlot(bool)
+    def _set_flip3d_show_borders(self, value):
+        self.flip3d_show_borders = value
+        if self.flip3d_widget:
+            self.flip3d_widget.set_settings(
+                self.flip3d_spacing,
+                self.flip3d_card_scale,
+                self.flip3d_animation_speed,
+                self.flip3d_show_memory,
+                self.flip3d_show_borders,
+                self.flip3d_show_titles
+            )
+
+    @pyqtSlot(bool)
+    def _set_flip3d_show_titles(self, value):
+        self.flip3d_show_titles = value
+        if self.flip3d_widget:
+            self.flip3d_widget.set_settings(
+                self.flip3d_spacing,
+                self.flip3d_card_scale,
+                self.flip3d_animation_speed,
+                self.flip3d_show_memory,
+                self.flip3d_show_borders,
+                self.flip3d_show_titles
+            )
+
+    def _show_flip3d(self):
+        if not self.flip3d_widget:
+            self.flip3d_widget = Flip3DWidget()
+            screen = QApplication.primaryScreen().geometry()
+            self.flip3d_widget.setGeometry(screen)
+            self.flip3d_widget.setWindowFlags(
+                self.flip3d_widget.windowFlags() |
+                Qt.WindowType.FramelessWindowHint |
+                Qt.WindowType.WindowStaysOnTopHint |
+                Qt.WindowType.Tool
+            )
+            self.flip3d_widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+            self.flip3d_widget.windowSelected.connect(self._on_flip3d_window_selected)
+            self.flip3d_widget.closeRequested.connect(self.toggle_visibility)
+
+        self._update_flip3d_data()
+        self.flip3d_widget.show()
+        self.flip3d_widget.raise_()
+        self.flip3d_widget.activateWindow()
+        self.flip3d_widget.setFocus()
+
+    def _hide_flip3d(self):
+        if self.flip3d_widget:
+            self.flip3d_widget.hide()
+
+    def _update_flip3d_data(self):
+        if not self.flip3d_widget:
+            return
+
+        data = []
+        for hwnd, w in self.thumbnails.items():
+            pixmap = self._capture_window_pixmap(hwnd)
+            memory_mb = 0
+            try:
+                pid = win32process.GetWindowThreadProcessId(hwnd)[1]
+                proc = psutil.Process(pid)
+                memory_mb = proc.memory_info().rss / (1024 * 1024)
+            except:
+                pass
+
+            data.append((hwnd, w.title_text, pixmap, memory_mb))
+
+        self.flip3d_widget.set_windows(data)
+        self.flip3d_widget.set_settings(
+            self.flip3d_spacing,
+            self.flip3d_card_scale,
+            self.flip3d_animation_speed,
+            self.flip3d_show_memory,
+            self.flip3d_show_borders,
+            self.flip3d_show_titles
+        )
+
+    def _capture_window_pixmap(self, hwnd):
+        try:
+            rect = win32gui.GetClientRect(hwnd)
+            w = rect[2] - rect[0]
+            h = rect[3] - rect[1]
+
+            if w <= 0 or h <= 0:
+                return QPixmap()
+
+            hwnd_dc = win32gui.GetWindowDC(hwnd)
+            mfc_dc = win32ui.CreateDCFromHandle(hwnd_dc)
+            save_dc = mfc_dc.CreateCompatibleDC()
+            save_bitmap = win32ui.CreateBitmap()
+            save_bitmap.CreateCompatibleBitmap(mfc_dc, w, h)
+            save_dc.SelectObject(save_bitmap)
+
+            import ctypes
+            user32 = ctypes.windll.user32
+            user32.PrintWindow(hwnd, save_dc.GetSafeHdc(), 3)
+
+            bmpinfo = save_bitmap.GetInfo()
+            bmpstr = save_bitmap.GetBitmapBits(True)
+
+            im = Image.frombuffer('RGB', (bmpinfo['bmWidth'], bmpinfo['bmHeight']), bmpstr, 'raw', 'BGRX', 0, 1)
+            qimage = QImage(im.tobytes(), im.width, im.height, QImage.Format.Format_RGB888).rgbSwapped()
+            pixmap = QPixmap.fromImage(qimage)
+
+            win32gui.DeleteObject(save_bitmap.GetHandle())
+            save_dc.DeleteDC()
+            mfc_dc.DeleteDC()
+            win32gui.ReleaseDC(hwnd, hwnd_dc)
+
+            return pixmap
+        except:
+            return QPixmap()
+
+    @pyqtSlot(int)
+    def _on_flip3d_window_selected(self, hwnd):
+        self.is_visible = False
+        self._hide_flip3d()
