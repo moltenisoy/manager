@@ -1,9 +1,12 @@
 import sys
-from PyQt6.QtWidgets import QApplication
+
 from PyQt6.QtCore import QThread
+from PyQt6.QtWidgets import QApplication
+
 from hook_manager import HookManager
-from window_monitor import WindowMonitor
 from thumbnail_manager import ThumbnailManager
+from window_monitor import WindowMonitor
+
 
 def main():
     app = QApplication(sys.argv)
@@ -22,6 +25,7 @@ def main():
     app.aboutToQuit.connect(hook_manager.disable)
     monitor_thread.start()
     sys.exit(app.exec())
+
 
 if __name__ == '__main__':
     main()

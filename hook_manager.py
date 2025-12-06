@@ -1,6 +1,8 @@
 import time
-from PyQt6.QtCore import QObject, pyqtSignal
+
 from pynput import mouse as pynput_mouse
+from PyQt6.QtCore import QObject, pyqtSignal
+
 
 class HookManager(QObject):
     toggle_visibility = pyqtSignal()

@@ -1,8 +1,10 @@
-import time
 import ctypes
-import win32gui
+import time
+
 import win32con
+import win32gui
 from PyQt6.QtCore import QObject, pyqtSignal
+
 
 class WindowMonitor(QObject):
     windows_updated = pyqtSignal(list)
