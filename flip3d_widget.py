@@ -161,7 +161,7 @@ class Flip3DWidget(QWidget):
             border_color = QColor(77, 212, 232) if is_selected else QColor(58, 64, 112)
             border_width = 3 if is_selected else 1
 
-            rect = QRect(-w/2, -h/2, w, h)
+            rect = QRect(int(-w/2), int(-h/2), int(w), int(h))
             path = QPainterPath()
             path.addRoundedRect(rect, 12 * scale, 12 * scale)
 
@@ -185,14 +185,14 @@ class Flip3DWidget(QWidget):
             painter.setFont(font)
             title_y = h/2 - 20*scale if self.show_borders else h/8
             title = card.title if len(card.title) <= 25 else card.title[:22] + "..."
-            painter.drawText(QRect(-w/2, title_y - 15, w, 30), Qt.AlignmentFlag.AlignCenter, title)
+            painter.drawText(QRect(int(-w/2), int(title_y - 15), int(w), 30), Qt.AlignmentFlag.AlignCenter, title)
 
         if self.show_memory and card.memory_mb > 0:
             mem_y = -h/2 - 10*scale if self.show_borders else -h/2 + 10*scale
             painter.setPen(QColor(170, 170, 170) if self.show_borders else QColor(255, 255, 0))
             font = QFont("Arial", max(7, int(9*scale)))
             painter.setFont(font)
-            painter.drawText(QRect(-w/2, mem_y - 10, w, 20), Qt.AlignmentFlag.AlignCenter, f"{card.memory_mb:.0f} MB")
+            painter.drawText(QRect(int(-w/2), int(mem_y - 10), int(w), 20), Qt.AlignmentFlag.AlignCenter, f"{card.memory_mb:.0f} MB")
 
         painter.restore()
 
@@ -211,7 +211,7 @@ class Flip3DWidget(QWidget):
                     bg_color = QColor(45, 90, 123)
                     border_color = QColor(77, 212, 232)
 
-                    rect = QRect(-w/2, -h/2, w, h)
+                    rect = QRect(int(-w/2), int(-h/2), int(w), int(h))
                     path = QPainterPath()
                     path.addRoundedRect(rect, 12, 12)
 
@@ -236,14 +236,14 @@ class Flip3DWidget(QWidget):
                     painter.setFont(font)
                     title_y = h/2 - 25
                     title = card.title if len(card.title) <= 40 else card.title[:37] + "..."
-                    painter.drawText(QRect(-w/2, title_y - 15, w, 30), Qt.AlignmentFlag.AlignCenter, title)
+                    painter.drawText(QRect(int(-w/2), int(title_y - 15), int(w), 30), Qt.AlignmentFlag.AlignCenter, title)
 
                 if self.show_memory and card.memory_mb > 0:
                     mem_y = -h/2 - 15 if self.show_borders else -h/2 + 15
                     painter.setPen(QColor(170, 170, 170) if self.show_borders else QColor(255, 255, 0))
                     font = QFont("Arial", 11)
                     painter.setFont(font)
-                    painter.drawText(QRect(-w/2, mem_y - 10, w, 20),
+                    painter.drawText(QRect(int(-w/2), int(mem_y - 10), int(w), 20),
                                      Qt.AlignmentFlag.AlignCenter, f"{card.memory_mb:.0f} MB")
 
                 painter.restore()
@@ -313,7 +313,7 @@ class Flip3DWidget(QWidget):
         w = min(800, self.width() - 100)
         h = min(600, self.height() - 100)
 
-        self.exclusive_geometry = QRect(cx - w/2, cy - h/2, w, h)
+        self.exclusive_geometry = QRect(int(cx - w/2), int(cy - h/2), int(w), int(h))
         self.update()
 
     def _exit_exclusive_mode(self):
@@ -343,4 +343,4 @@ class Flip3DWidget(QWidget):
             cy = self.height() / 2
             w = min(800, self.width() - 100)
             h = min(600, self.height() - 100)
-            self.exclusive_geometry = QRect(cx - w/2, cy - h/2, w, h)
+            self.exclusive_geometry = QRect(int(cx - w/2), int(cy - h/2), int(w), int(h))
