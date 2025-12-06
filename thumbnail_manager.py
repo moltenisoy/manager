@@ -447,9 +447,7 @@ class ThumbnailManager(QObject):
             else:
                 self._update_layout(is_appearing=True)
 
-    @pyqtSlot(int)
-    def _set_flip3d_spacing(self, value):
-        self.flip3d_spacing = value
+    def _update_flip3d_settings(self):
         if self.flip3d_widget:
             self.flip3d_widget.set_settings(
                 self.flip3d_spacing,
@@ -459,71 +457,36 @@ class ThumbnailManager(QObject):
                 self.flip3d_show_borders,
                 self.flip3d_show_titles
             )
+
+    @pyqtSlot(int)
+    def _set_flip3d_spacing(self, value):
+        self.flip3d_spacing = value
+        self._update_flip3d_settings()
 
     @pyqtSlot(float)
     def _set_flip3d_card_scale(self, value):
         self.flip3d_card_scale = value
-        if self.flip3d_widget:
-            self.flip3d_widget.set_settings(
-                self.flip3d_spacing,
-                self.flip3d_card_scale,
-                self.flip3d_animation_speed,
-                self.flip3d_show_memory,
-                self.flip3d_show_borders,
-                self.flip3d_show_titles
-            )
+        self._update_flip3d_settings()
 
     @pyqtSlot(float)
     def _set_flip3d_animation_speed(self, value):
         self.flip3d_animation_speed = value
-        if self.flip3d_widget:
-            self.flip3d_widget.set_settings(
-                self.flip3d_spacing,
-                self.flip3d_card_scale,
-                self.flip3d_animation_speed,
-                self.flip3d_show_memory,
-                self.flip3d_show_borders,
-                self.flip3d_show_titles
-            )
+        self._update_flip3d_settings()
 
     @pyqtSlot(bool)
     def _set_flip3d_show_memory(self, value):
         self.flip3d_show_memory = value
-        if self.flip3d_widget:
-            self.flip3d_widget.set_settings(
-                self.flip3d_spacing,
-                self.flip3d_card_scale,
-                self.flip3d_animation_speed,
-                self.flip3d_show_memory,
-                self.flip3d_show_borders,
-                self.flip3d_show_titles
-            )
+        self._update_flip3d_settings()
 
     @pyqtSlot(bool)
     def _set_flip3d_show_borders(self, value):
         self.flip3d_show_borders = value
-        if self.flip3d_widget:
-            self.flip3d_widget.set_settings(
-                self.flip3d_spacing,
-                self.flip3d_card_scale,
-                self.flip3d_animation_speed,
-                self.flip3d_show_memory,
-                self.flip3d_show_borders,
-                self.flip3d_show_titles
-            )
+        self._update_flip3d_settings()
 
     @pyqtSlot(bool)
     def _set_flip3d_show_titles(self, value):
         self.flip3d_show_titles = value
-        if self.flip3d_widget:
-            self.flip3d_widget.set_settings(
-                self.flip3d_spacing,
-                self.flip3d_card_scale,
-                self.flip3d_animation_speed,
-                self.flip3d_show_memory,
-                self.flip3d_show_borders,
-                self.flip3d_show_titles
-            )
+        self._update_flip3d_settings()
 
     def _show_flip3d(self):
         if not self.flip3d_widget:
@@ -562,20 +525,13 @@ class ThumbnailManager(QObject):
                 pid = win32process.GetWindowThreadProcessId(hwnd)[1]
                 proc = psutil.Process(pid)
                 memory_mb = proc.memory_info().rss / (1024 * 1024)
-            except:
+            except Exception:
                 pass
 
             data.append((hwnd, w.title_text, pixmap, memory_mb))
 
         self.flip3d_widget.set_windows(data)
-        self.flip3d_widget.set_settings(
-            self.flip3d_spacing,
-            self.flip3d_card_scale,
-            self.flip3d_animation_speed,
-            self.flip3d_show_memory,
-            self.flip3d_show_borders,
-            self.flip3d_show_titles
-        )
+        self._update_flip3d_settings()
 
     def _capture_window_pixmap(self, hwnd):
         try:
@@ -610,7 +566,7 @@ class ThumbnailManager(QObject):
             win32gui.ReleaseDC(hwnd, hwnd_dc)
 
             return pixmap
-        except:
+        except Exception:
             return QPixmap()
 
     @pyqtSlot(int)
