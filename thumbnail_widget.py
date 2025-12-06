@@ -1,18 +1,22 @@
-import os
 import ctypes
+import os
 from ctypes import wintypes
-import win32gui
-import win32con
-import win32ui
-import win32process
+
 import psutil
-from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QApplication
-from PyQt6.QtCore import Qt, QTimer, QPoint, QPropertyAnimation, QEasingCurve, QRect, pyqtSignal, QSize
-from PyQt6.QtGui import QPixmap, QImage, QMouseEvent, QFont, QPainter, QColor
+import win32con
+import win32gui
+import win32process
+import win32ui
 from PIL import Image
+from PyQt6.QtCore import (QEasingCurve, QPoint, QPropertyAnimation, QRect,
+                          QSize, Qt, QTimer, pyqtSignal)
+from PyQt6.QtGui import QFont, QImage, QMouseEvent, QPixmap
+from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
+
 
 class RECT(wintypes.RECT):
     pass
+
 
 class DWM_THUMBNAIL_PROPERTIES(ctypes.Structure):
     _fields_ = [
@@ -23,6 +27,7 @@ class DWM_THUMBNAIL_PROPERTIES(ctypes.Structure):
         ('fVisible', wintypes.BOOL),
         ('fSourceClientAreaOnly', wintypes.BOOL)
     ]
+
 
 class FloatingNameLabel(QWidget):
     def __init__(self, text="", parent=None):
@@ -118,6 +123,7 @@ class FloatingNameLabel(QWidget):
 
         self.move(x, y)
 
+
 class ThumbnailWidget(QWidget):
     wants_to_be_removed = pyqtSignal(int)
     rightClicked = pyqtSignal()
@@ -178,16 +184,16 @@ class ThumbnailWidget(QWidget):
         except:
             self.pid = 0
             self.process = None
-        
+
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setMouseTracking(True)
-        
+
         # Contenedor de miniatura
         self.thumbnail_container = QWidget(self)
         self.thumbnail_layout = QVBoxLayout(self.thumbnail_container)
         self.thumbnail_layout.setContentsMargins(0, 0, 0, 0)
-        
+
         self.thumbnail_label = QLabel()
         self.thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.thumbnail_layout.addWidget(self.thumbnail_label)
@@ -196,10 +202,10 @@ class ThumbnailWidget(QWidget):
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.addWidget(self.thumbnail_container)
-        
+
         # Estilo de borde
         self._update_border_style()
-        
+
         self.close_button = None
 
     # ---- Helpers nombre/app ----
@@ -277,7 +283,8 @@ class ThumbnailWidget(QWidget):
         if not hasattr(self, 'thumbnail_container'):
             return
         if self._border_enabled:
-            self.thumbnail_container.setStyleSheet(f"background-color: rgba(1, 2, 3, 1); border: {self._border_width}px solid {self._border_color};")
+            self.thumbnail_container.setStyleSheet(
+                f"background-color: rgba(1, 2, 3, 1); border: {self._border_width}px solid {self._border_color};")
         else:
             self.thumbnail_container.setStyleSheet("background-color: rgba(1, 2, 3, 1);")
 
@@ -537,7 +544,8 @@ class ThumbnailWidget(QWidget):
         im = Image.frombuffer('RGB', (bmpinfo['bmWidth'], bmpinfo['bmHeight']), bmpstr, 'raw', 'BGRX', 0, 1)
         qimage = QImage(im.tobytes(), im.width, im.height, QImage.Format.Format_RGB888).rgbSwapped()
         pixmap = QPixmap.fromImage(qimage)
-        self.thumbnail_label.setPixmap(pixmap.scaled(self.thumbnail_label.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.thumbnail_label.setPixmap(pixmap.scaled(self.thumbnail_label.size(
+        ), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         win32gui.DeleteObject(save_bitmap.GetHandle())
         save_dc.DeleteDC()
         mfc_dc.DeleteDC()
@@ -547,7 +555,8 @@ class ThumbnailWidget(QWidget):
         self._capture_window(lambda save_dc, w, h: self.user32.PrintWindow(self.hwnd, save_dc.GetSafeHdc(), 3))
 
     def _update_with_bitblt(self):
-        self._capture_window(lambda save_dc, w, h: save_dc.BitBlt((0, 0), (w, h), win32ui.CreateDCFromHandle(win32gui.GetWindowDC(self.hwnd)), (0, 0), win32con.SRCCOPY))
+        self._capture_window(lambda save_dc, w, h: save_dc.BitBlt(
+            (0, 0), (w, h), win32ui.CreateDCFromHandle(win32gui.GetWindowDC(self.hwnd)), (0, 0), win32con.SRCCOPY))
 
     # ----------------- Animaciones de entrada/geometría/salida -----------------
     def animate_enter_diagonal(self, start_pos, end_pos):

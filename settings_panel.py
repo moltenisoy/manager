@@ -1,13 +1,13 @@
 import getpass
+
 import psutil
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QGridLayout, QLabel, QSlider,
-    QPushButton, QGroupBox, QCheckBox, QColorDialog,
-    QHBoxLayout, QListWidget, QListWidgetItem, QComboBox,
-    QSpinBox, QFontDialog, QGraphicsDropShadowEffect
-)
-from PyQt6.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup
+from PyQt6.QtCore import (QEasingCurve, QParallelAnimationGroup,
+                          QPropertyAnimation, Qt, pyqtSignal)
 from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtWidgets import (QCheckBox, QColorDialog, QComboBox, QFontDialog,
+                             QGraphicsDropShadowEffect, QGridLayout, QGroupBox,
+                             QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
+                             QPushButton, QSlider, QVBoxLayout, QWidget)
 
 # Tema HALO 3 (alineado con gui.py)
 THEME = {
@@ -22,6 +22,7 @@ THEME = {
     "glow2": "#8fd14f",
     "font_family": "Segoe UI",
 }
+
 
 def make_qt_stylesheet(theme: dict) -> str:
     # QSS ajustado a “elementos flotantes” (sin cajas de fondo ni bordes)
@@ -155,6 +156,7 @@ def make_qt_stylesheet(theme: dict) -> str:
     }}
     """
 
+
 def pulsing_glow(widget, color1: str, color2: str, blur_min=12, blur_max=28, duration=4200):
     # Efecto opcional (con grupos “flotantes” sigue siendo válido)
     effect = QGraphicsDropShadowEffect(widget)
@@ -187,6 +189,7 @@ def pulsing_glow(widget, color1: str, color2: str, blur_min=12, blur_max=28, dur
     if not hasattr(widget, "_glow_animations"):
         widget._glow_animations = []
     widget._glow_animations.append((effect, grp))
+
 
 class SettingsPanel(QWidget):
     distanceChanged = pyqtSignal(int)

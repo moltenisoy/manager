@@ -1,16 +1,19 @@
 import os
 import subprocess
+
 import psutil
-import win32process
 import win32gui
+import win32process
 import win32ui
-from PyQt6.QtCore import QObject, pyqtSlot, QPoint, QRect
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtGui import QFont, QPixmap, QImage
-from thumbnail_widget import ThumbnailWidget
-from settings_panel import SettingsPanel
-from flip3d_widget import Flip3DWidget
 from PIL import Image
+from PyQt6.QtCore import QObject, QPoint, QRect, Qt, pyqtSlot
+from PyQt6.QtGui import QFont, QImage, QPixmap
+from PyQt6.QtWidgets import QApplication
+
+from flip3d_widget import Flip3DWidget
+from settings_panel import SettingsPanel
+from thumbnail_widget import ThumbnailWidget
+
 
 class ThumbnailManager(QObject):
     def __init__(self, hook_manager):
@@ -52,7 +55,7 @@ class ThumbnailManager(QObject):
         self.name_content_mode = "full"
 
         self.ignored_exe_names = set()
-        
+
         self.settings_panel = SettingsPanel()
         self.settings_panel.closeApp.connect(self.force_quit_app)
         self.settings_panel.distanceChanged.connect(self._set_screen_distance)
@@ -248,7 +251,8 @@ class ThumbnailManager(QObject):
             if hasattr(widget, "set_layout_target_geometry"):
                 widget.set_layout_target_geometry(target_geometry)
             if is_appearing:
-                widget.setGeometry(QRect(target_geometry.x(), target_geometry.y(), target_geometry.width(), target_geometry.height()))
+                widget.setGeometry(QRect(target_geometry.x(), target_geometry.y(),
+                                   target_geometry.width(), target_geometry.height()))
                 start_pos = QPoint(-target_geometry.width(), max(0, target_geometry.y() - 60))
                 widget.move(start_pos)
                 widget.show()

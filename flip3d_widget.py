@@ -1,10 +1,9 @@
-import math
-import win32gui
 import win32con
-from PyQt6.QtWidgets import QWidget, QLabel
-from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QRect, QPoint, pyqtSignal
-from PyQt6.QtGui import QPainter, QColor, QPixmap, QImage, QPen, QPainterPath, QFont, QTransform
-from PIL import Image
+import win32gui
+from PyQt6.QtCore import QPoint, QRect, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
+from PyQt6.QtWidgets import QWidget
+
 
 class ThumbnailCard:
     def __init__(self, hwnd, title, pixmap, memory_mb=0):
@@ -19,6 +18,7 @@ class ThumbnailCard:
         self.rotation = 0
         self.scale = 1.0
         self.is_selected = False
+
 
 class Flip3DWidget(QWidget):
     windowSelected = pyqtSignal(int)
@@ -137,14 +137,14 @@ class Flip3DWidget(QWidget):
 
         draw_order.sort(key=lambda x: x[2])
 
-        for i, dist, z in draw_order:
+        for i, dist, _ in draw_order:
             card = self.cards[i]
 
             scale = max(0.5, 1.0 - (abs(dist) * 0.1)) * self.card_scale
             x = cx + (dist * self.spacing * 0.8)
             y = cy + (abs(dist) * 20)
             rot = -dist * 5
-            is_sel = (int(round(self.current_index_float)) == i)
+            is_sel = int(round(self.current_index_float)) == i
 
             self._draw_card(painter, card, x, y, base_w, base_h, scale, rot, is_sel)
 
@@ -174,7 +174,8 @@ class Flip3DWidget(QWidget):
             img_h = int(h - (40 * scale if self.show_borders else 0))
 
             if img_w > 10 and img_h > 10:
-                scaled_pixmap = card.pixmap.scaled(img_w, img_h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                scaled_pixmap = card.pixmap.scaled(
+                    img_w, img_h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                 painter.drawPixmap(-scaled_pixmap.width()/2, -scaled_pixmap.height()/2, scaled_pixmap)
 
         if self.show_titles:
@@ -223,7 +224,9 @@ class Flip3DWidget(QWidget):
                     img_h = int(h - (40 if self.show_borders else 0))
 
                     if img_w > 10 and img_h > 10:
-                        scaled_pixmap = card.pixmap.scaled(img_w, img_h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                        scaled_pixmap = card.pixmap.scaled(
+                            img_w, img_h, Qt.AspectRatioMode.KeepAspectRatio,
+                            Qt.TransformationMode.SmoothTransformation)
                         painter.drawPixmap(-scaled_pixmap.width()/2, -scaled_pixmap.height()/2, scaled_pixmap)
 
                 if self.show_titles:
@@ -240,7 +243,8 @@ class Flip3DWidget(QWidget):
                     painter.setPen(QColor(170, 170, 170) if self.show_borders else QColor(255, 255, 0))
                     font = QFont("Arial", 11)
                     painter.setFont(font)
-                    painter.drawText(QRect(-w/2, mem_y - 10, w, 20), Qt.AlignmentFlag.AlignCenter, f"{card.memory_mb:.0f} MB")
+                    painter.drawText(QRect(-w/2, mem_y - 10, w, 20),
+                                     Qt.AlignmentFlag.AlignCenter, f"{card.memory_mb:.0f} MB")
 
                 painter.restore()
                 break
@@ -329,7 +333,7 @@ class Flip3DWidget(QWidget):
                     win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                 win32gui.SetForegroundWindow(hwnd)
                 self.windowSelected.emit(hwnd)
-            except:
+            except Exception:
                 pass
 
     def resizeEvent(self, event):
